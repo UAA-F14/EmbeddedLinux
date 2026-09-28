@@ -1,0 +1,4 @@
+(sym_lib_table
+	(version 7)
+	(lib (name "raspberrypi-gpio-40pin-cache") (type "Legacy") (uri "/home/tostada105/Downloads/kicad-templates-master/Projects/raspberrypi-gpio-40pin/ORANGE_PI_4_PRO-cache.lib") (options "") (descr "Legacy project cache library"))
+)
