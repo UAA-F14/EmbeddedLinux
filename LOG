@@ -1,0 +1,4 @@
+ls /sys/class/pwm/
+ls /sys/class/pwm/pwmchip0
+gpio funcs
+grep -A30 -B5 "Name: /boot/firmware/overlays/README"
