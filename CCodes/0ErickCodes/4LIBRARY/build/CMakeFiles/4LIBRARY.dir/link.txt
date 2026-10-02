@@ -1,1 +1,0 @@
-/usr/bin/cc CMakeFiles/4LIBRARY.dir/src/gpio.c.o CMakeFiles/4LIBRARY.dir/src/main.c.o -o 4LIBRARY  -lgpiod 

@@ -1,1 +1,0 @@
-/usr/bin/cc CMakeFiles/3GPIOIN.dir/main.c.o -o 3GPIOIN  -lgpiod 

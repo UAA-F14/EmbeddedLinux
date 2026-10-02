@@ -1,3 +1,0 @@
-/home/orangepi/Scripts/Embedded/CCodes/0ErickCodes/4LIBRARY/build/CMakeFiles/4LIBRARY.dir
-/home/orangepi/Scripts/Embedded/CCodes/0ErickCodes/4LIBRARY/build/CMakeFiles/edit_cache.dir
-/home/orangepi/Scripts/Embedded/CCodes/0ErickCodes/4LIBRARY/build/CMakeFiles/rebuild_cache.dir
