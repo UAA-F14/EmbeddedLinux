@@ -13,13 +13,13 @@
 #define CONSUMER          "3GPIOIN"
 
 #define LED_OFFSET        4
-#define BTN_FASTER_OFFSET 6   // botón: más rápido
-#define BTN_SLOWER_OFFSET 5   // botón: más lento  <-- AJUSTA al pin donde lo conectes
+#define BTN_FASTER_OFFSET 6   
+#define BTN_SLOWER_OFFSET 5   
 
-#define TICK_US           10000   // periodo de muestreo: 10 ms
-#define DEBOUNCE_MS       50      // tiempo mínimo entre flancos válidos
+#define TICK_US           10000   
+#define DEBOUNCE_MS       50      
 
-// Semiperiodo del parpadeo por nivel (mayor nivel = más rápido)
+
 static const unsigned int half_period_ms[] = {1000, 700, 500, 300, 200, 100, 50};
 #define N_LEVELS    ((int)(sizeof(half_period_ms) / sizeof(half_period_ms[0])))
 #define START_LEVEL 2
