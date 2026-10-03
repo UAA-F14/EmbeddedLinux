@@ -13,10 +13,11 @@ int main(void){
     gpio_start();
     // PWM
     int period = 10000000; // 100 Hz -> 10 ms -> 10 000 000 ns
+    pwm_init(0);
     pwm_set_period(period); // 100 Hz -> 10 ms -> 10 000 000 ns
     pwm_set_duty_cycle(period/2); // 50% duty cycle
     pwm_set_channel(0); // Set channel to 0
-
+    pwm_enable();
     while(1){
         if(gpio_get(BUTTON1)==0){
             gpio_set(LED,1);
