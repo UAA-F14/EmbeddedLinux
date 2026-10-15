@@ -1,29 +1,42 @@
 #include <stdio.h>
-#include <string.h>
+#include <unistd.h>
 #include "spi.h"
+
+#define FRAME_LEN 6
 
 int main(void)
 {
     spi_t spi;
 
-    if (spi_open(&spi, "/dev/spidev1.0", 0, 8, 1000000) < 0)   // tu bus/CS
+    if (spi_open(&spi, "/dev/spidev1.0", 0, 8, 500000) < 0)   // tu bus/CS
     {
         perror("spi_open");
         return 1;
     }
 
-    uint8_t tx[4] = { 0xDE, 0xAD, 0xBE, 0xEF };
-    uint8_t rx[4] = { 0 };
-
-    if (spi_transfer(&spi, tx, rx, sizeof(tx)) < 0)
+    while (1)
     {
-        perror("spi_transfer");
-        spi_close(&spi);
-        return 1;
-    }
+        uint8_t tx[FRAME_LEN] = { 0 };   // el maestro manda ceros; solo genera reloj
+        uint8_t rx[FRAME_LEN];
 
-    printf("rx: %02X %02X %02X %02X\n", rx[0], rx[1], rx[2], rx[3]);
-    printf("loopback %s\n", memcmp(tx, rx, sizeof(tx)) == 0 ? "OK" : "FALLO");
+        if (spi_transfer(&spi, tx, rx, FRAME_LEN) < 0)
+        {
+            perror("spi_transfer");
+            break;
+        }
+
+        uint8_t cs = 0;
+        for (int i = 0; i < FRAME_LEN - 1; i++)
+            cs ^= rx[i];
+
+        if (rx[0] == 0xA5 && cs == rx[FRAME_LEN - 1])
+            printf("seq=%3u  value=%5u  errs=%u\n",
+                   rx[1], (rx[2] << 8) | rx[3], rx[4]);
+        else
+            printf("frame invalido\n");
+
+        usleep(10000);                   // 10 ms entre frames
+    }
 
     spi_close(&spi);
     return 0;
