@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define PWM_PATH "/sys/class/pwm/pwmchip0"
+#define PWM_PATH "/sys/class/pwm/pwmchip0/pwm0"
 int main() {
     FILE *file;
     // Export PWM channel 0

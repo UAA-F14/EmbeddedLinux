@@ -48,3 +48,20 @@ Pines no listados (1, 2, 4, 6, 9, 14, 17, 20, 25, 30, 34, 39) son
 Actualmente conectado en **pin fisico 7** (PWM0-2, GPIO 356) ->
 `gpiochip1`, offset `4`. Es el pin que usa `1GPIO/main.c`, `4Blink.c` y
 `5Temp.c`.
+## PWM por hardware (pwmchip0/pwm0)
+
+Ojo: el pin fisico 7 (PWM0-2/SPWM0-2) **NO** es donde sale la senal de
+`pwmchip0/pwm0` con el overlay activo actualmente
+(`/boot/orangepiEnv.txt` -> `overlays=pwm0`, que carga
+`sun60i-a733-pwm0.dtbo`). Ese overlay corresponde a **PWM0-0**, que sale
+por el **pin fisico 29**, no por el 7.
+
+Para que el PWM por hardware salga en el pin 7 haria falta cambiar el
+overlay a `spwm2` (`sun60i-a733-spwm2.dtbo`) y reiniciar -- sin eso,
+cualquier codigo que escriba en `pwmchip0/pwm0/*` (periodo, duty_cycle,
+enable) configura todo bien pero la senal electrica sale por el
+pin 29.
+
+**Conectar el LED/motor de pruebas de PWM al pin fisico 29**, no al 7.
+(El pin 7 sigue sirviendo para GPIO normal via `gpiochip1` offset 4, solo
+no para el PWM por hardware con el overlay actual.)
