@@ -10,7 +10,7 @@ int main() {
         perror("Failed to open period file");
         return 1;
     }
-    fprintf(file, "100000"); // Set period to 10000000ns (50Hz)
+    fprintf(file, "10000000"); // Set period to 10000000ns (50Hz)
     fclose(file);
     //configure duty cycle
     file = fopen(PWM_PATH "/duty_cycle", "w");
@@ -18,7 +18,7 @@ int main() {
         perror("Failed to open duty_cycle file");
         return 1;
     }
-    fprintf(file, "10000"); // Set duty cycle to 5000000ns (50%)
+    fprintf(file, "6000000"); // Set duty cycle to 5000000ns (50%)
     fclose(file);
     //enable PWM channel 0
     file = fopen(PWM_PATH "/enable", "w");
