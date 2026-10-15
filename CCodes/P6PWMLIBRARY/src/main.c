@@ -1,37 +1,76 @@
+#include "pwm.h"
 #include "gpio.h"
+#include <signal.h>
+#include <string.h>
 #include <unistd.h>
 
-#define LED 4
-#define BUTTON1 5
-#define BUTTON2 6
-int main(void){
+#define BUTTON1 5   // increase duty cycle
+#define BUTTON2 6   // decrease duty cycle
+
+#define PERIOD_NS   10000000          // 100 Hz
+#define DUTY_STEP   (PERIOD_NS / 20)  // 5% per step
+#define REPEAT_US   100000            // step rate while a button is held (100 ms)
+
+static volatile sig_atomic_t running = 1;
+
+static void on_signal(int sig)
+{
+    (void)sig;
+    running = 0;
+}
+
+int main(void)
+{
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = on_signal;
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+
     // GPIO
-    gpio_init();
-    gpio_configure(LED,GPIO_OUTPUT);
-    gpio_configure(BUTTON1,GPIO_INPUT_PULLUP);
-    gpio_configure(BUTTON2,GPIO_INPUT_PULLUP);
-    gpio_start();
-    // PWM
-    int period = 10000000; // 100 Hz -> 10 ms -> 10 000 000 ns
-    pwm_init(0);
-    pwm_set_period(period); // 100 Hz -> 10 ms -> 10 000 000 ns
-    pwm_set_duty_cycle(period/2); // 50% duty cycle
-    pwm_set_channel(0); // Set channel to 0
-    pwm_enable();
-    while(1){
-        if(gpio_get(BUTTON1)==0){
-            gpio_set(LED,1);
-            usleep(50000);
-            gpio_set(LED,0);
-            usleep(50000);
+    if (gpio_init() != 0)
+        return 1;
+    gpio_configure(BUTTON1, GPIO_INPUT_PULLUP);
+    gpio_configure(BUTTON2, GPIO_INPUT_PULLUP);
+    if (gpio_start() != 0) {
+        gpio_cleanup();
+        return 1;
+    }
+
+    // PWM: channel 0, 100 Hz, start at 50% duty cycle
+    int duty = PERIOD_NS / 2;
+    if (pwm_init(0) != 0 ||
+        pwm_set_period(PERIOD_NS) != 0 ||
+        pwm_set_duty_cycle(duty) != 0 ||
+        pwm_enable() != 0) {
+        gpio_cleanup();
+        return 1;
+    }
+
+    while (running) {
+        int changed = 0;
+
+        if (gpio_get(BUTTON1) == 0) {           // pressed (active low)
+            duty += DUTY_STEP;
+            if (duty > PERIOD_NS)
+                duty = PERIOD_NS;
+            changed = 1;
+        } else if (gpio_get(BUTTON2) == 0) {
+            duty -= DUTY_STEP;
+            if (duty < 0)
+                duty = 0;
+            changed = 1;
         }
-        if(gpio_get(BUTTON2)==0){
-            gpio_set(LED,1);
-            usleep(500000);
-            gpio_set(LED,0);
-            usleep(500000);
+
+        if (changed) {
+            if (pwm_set_duty_cycle(duty) != 0)
+                break;
+            usleep(REPEAT_US);                  // holding the button keeps stepping
+        } else {
+            usleep(10000);
         }
     }
+
     gpio_cleanup();
     return 0;
 }

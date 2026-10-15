@@ -1,6 +1,7 @@
 #ifndef PWM_H
 #define PWM_H
-#define PWM_PATH "/sys/class/pwm/pwmchip0/pwm0"
+
+#define PWM_CHIP_PATH "/sys/class/pwm/pwmchip0"
 
 /*
 PWM Bus     Pin     dtbo
@@ -13,9 +14,15 @@ PWM0-5      32      pwm5
 PWM0-6      36      pwm6
 PWM0-7      38      pwm7
 */
-int PWM_PIN* = {29, 0, 33, 35, 37, 32, 36, 38};
-void pwm_init(int channel);
-void pwm_set_period(int period);
-void pwm_set_duty_cycle(int duty_cycle);
-void pwm_set_channel(int channel);
-#endif 
+extern const int PWM_PIN[8];
+
+// channel: indice de pwmchipN/pwmX a exportar y usar (0..7, ver tabla arriba).
+// El resto de las funciones operan sobre el ultimo canal inicializado.
+int  pwm_init(int channel);
+int  pwm_set_period(long period_ns);
+int  pwm_set_duty_cycle(long duty_ns);
+int  pwm_enable(void);
+int  pwm_disable(void);
+void pwm_cleanup(void);   // disable + unexport
+
+#endif

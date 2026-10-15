@@ -3,8 +3,8 @@
 #include <gpiod.h>
 
 static struct gpiod_chip *chip;
-static struct gpio_line_request *request;
-static struct gpio_line_config *config;
+static struct gpiod_line_request *request;
+static struct gpiod_line_config *config;
 
 
 int gpio_init(void){
