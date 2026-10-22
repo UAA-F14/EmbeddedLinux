@@ -2,15 +2,15 @@ import time
 import gpiod
 from gpiod.line import Direction, Value, Bias
 
-Boton = 22
+Boton = 7
 
 with gpiod.request_lines(
-"/dev/gpiochip0",
+"/dev/gpiochip1",
     consumer="lectura-boton",
     config={
         Boton: gpiod.LineSettings(
             direction=Direction.INPUT,
-            bias=Bias.PULL_UP
+            bias = Bias.PULL_UP
         )
     },
 )as gpio:
