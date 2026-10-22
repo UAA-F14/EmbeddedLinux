@@ -1,19 +1,17 @@
 #include "pwm.h"
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 const int PWM_PIN[8] = {29, 0, 33, 35, 37, 32, 36, 38};
 
-// Ruta base del ultimo canal inicializado (pwmchipN/pwmX), la llenan
-// pwm_init() y el resto de las funciones la reutilizan. Antes la libreria
-// tenia PWM_PATH fijo a pwm0 sin importar el canal pedido; con esto cada
-// canal escribe en su propia carpeta.
-static char current_chan_path[64];
-static int  current_channel = -1;
-static int  initialized = 0;
+struct pwm_channel {
+    int  channel;
+    char base_path[64];
+};
 
 static int write_int(const char *path, long value)
 {
@@ -30,83 +28,70 @@ static int write_int(const char *path, long value)
     return 0;
 }
 
-int pwm_init(int channel)
+pwm_channel *pwm_open(int channel)
 {
     struct stat st;
     char export_path[64];
+    char base_path[64];
 
     snprintf(export_path, sizeof(export_path), "%s/export", PWM_CHIP_PATH);
-    snprintf(current_chan_path, sizeof(current_chan_path), "%s/pwm%d", PWM_CHIP_PATH, channel);
+    snprintf(base_path, sizeof(base_path), "%s/pwm%d", PWM_CHIP_PATH, channel);
 
-    // Export solo si el canal no existe todavia (re-exportar un canal ya
+    // Export solo si el canal no existe todavia (reexportar uno ya
     // activo regresa EBUSY)
-    if (stat(current_chan_path, &st) != 0) {
+    if (stat(base_path, &st) != 0) {
         if (write_int(export_path, channel) != 0)
-            return -1;
-        usleep(200000);   // esperar a que el kernel cree la carpeta pwmN
+            return NULL;
+        usleep(200000); // esperar a que el kernel cree la carpeta pwmN
     }
 
-    current_channel = channel;
-    initialized = 1;
+    pwm_channel *ch = malloc(sizeof(*ch));
+    if (!ch) {
+        fprintf(stderr, "pwm_open: sin memoria\n");
+        return NULL;
+    }
+    ch->channel = channel;
+    snprintf(ch->base_path, sizeof(ch->base_path), "%s", base_path);
 
-    // Si ya estaba activo con otros valores, apagar antes de reconfigurar
-    pwm_disable();
-    return 0;
+    pwm_disable(ch); // apagar antes de que el caller lo reconfigure
+    return ch;
 }
 
-int pwm_set_period(long period_ns)
+int pwm_set_period(pwm_channel *ch, long period_ns)
 {
     char path[80];
-    if (!initialized) {
-        fprintf(stderr, "pwm_set_period: llama pwm_init() primero\n");
-        return -1;
-    }
-    snprintf(path, sizeof(path), "%s/period", current_chan_path);
+    snprintf(path, sizeof(path), "%s/period", ch->base_path);
     return write_int(path, period_ns);
 }
 
-int pwm_set_duty_cycle(long duty_ns)
+int pwm_set_duty_cycle(pwm_channel *ch, long duty_ns)
 {
     char path[80];
-    if (!initialized) {
-        fprintf(stderr, "pwm_set_duty_cycle: llama pwm_init() primero\n");
-        return -1;
-    }
-    snprintf(path, sizeof(path), "%s/duty_cycle", current_chan_path);
+    snprintf(path, sizeof(path), "%s/duty_cycle", ch->base_path);
     return write_int(path, duty_ns);
 }
 
-int pwm_enable(void)
+int pwm_enable(pwm_channel *ch)
 {
     char path[80];
-    if (!initialized) {
-        fprintf(stderr, "pwm_enable: llama pwm_init() primero\n");
-        return -1;
-    }
-    snprintf(path, sizeof(path), "%s/enable", current_chan_path);
+    snprintf(path, sizeof(path), "%s/enable", ch->base_path);
     return write_int(path, 1);
 }
 
-int pwm_disable(void)
+int pwm_disable(pwm_channel *ch)
 {
     char path[80];
-    if (!initialized)
-        return 0;
-    snprintf(path, sizeof(path), "%s/enable", current_chan_path);
+    snprintf(path, sizeof(path), "%s/enable", ch->base_path);
     return write_int(path, 0);
 }
 
-void pwm_cleanup(void)
+void pwm_close(pwm_channel *ch)
 {
+    if (!ch) return;
+
     char unexport_path[64];
-    if (!initialized)
-        return;
-
-    pwm_disable();
-
+    pwm_disable(ch);
     snprintf(unexport_path, sizeof(unexport_path), "%s/unexport", PWM_CHIP_PATH);
-    write_int(unexport_path, current_channel);
-
-    current_channel = -1;
-    initialized = 0;
+    write_int(unexport_path, ch->channel);
+    free(ch);
 }

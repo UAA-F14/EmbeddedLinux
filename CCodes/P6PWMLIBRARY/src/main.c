@@ -38,11 +38,17 @@ int main(void)
     }
 
     // PWM: channel 0, 100 Hz, start at 50% duty cycle
+    pwm_channel *ch = pwm_open(0);
+    if (!ch) {
+        gpio_cleanup();
+        return 1;
+    }
+
     int duty = PERIOD_NS / 2;
-    if (pwm_init(0) != 0 ||
-        pwm_set_period(PERIOD_NS) != 0 ||
-        pwm_set_duty_cycle(duty) != 0 ||
-        pwm_enable() != 0) {
+    if (pwm_set_period(ch, PERIOD_NS) != 0 ||
+        pwm_set_duty_cycle(ch, duty) != 0 ||
+        pwm_enable(ch) != 0) {
+        pwm_close(ch);
         gpio_cleanup();
         return 1;
     }
@@ -63,7 +69,7 @@ int main(void)
         }
 
         if (changed) {
-            if (pwm_set_duty_cycle(duty) != 0)
+            if (pwm_set_duty_cycle(ch, duty) != 0)
                 break;
             usleep(REPEAT_US);                  // holding the button keeps stepping
         } else {
@@ -71,6 +77,7 @@ int main(void)
         }
     }
 
+    pwm_close(ch);
     gpio_cleanup();
     return 0;
 }

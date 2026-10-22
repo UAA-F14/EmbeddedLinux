@@ -16,13 +16,20 @@ PWM0-7      38      pwm7
 */
 extern const int PWM_PIN[8];
 
-// channel: indice de pwmchipN/pwmX a exportar y usar (0..7, ver tabla arriba).
-// El resto de las funciones operan sobre el ultimo canal inicializado.
-int  pwm_init(int channel);
-int  pwm_set_period(long period_ns);
-int  pwm_set_duty_cycle(long duty_ns);
-int  pwm_enable(void);
-int  pwm_disable(void);
-void pwm_cleanup(void);   // disable + unexport
+// Handle opaco a un canal PWM ya exportado. Se pueden tener varios
+// abiertos al mismo tiempo (uno por servo, por ejemplo) -- a
+// diferencia de la version anterior de esta libreria, que solo podia
+// operar un canal "activo" a la vez.
+typedef struct pwm_channel pwm_channel;
+
+// Exporta el canal (0..7, ver tabla de arriba) y regresa un handle
+// para usarlo. NULL si fallo.
+pwm_channel *pwm_open(int channel);
+
+int  pwm_set_period(pwm_channel *ch, long period_ns);
+int  pwm_set_duty_cycle(pwm_channel *ch, long duty_ns);
+int  pwm_enable(pwm_channel *ch);
+int  pwm_disable(pwm_channel *ch);
+void pwm_close(pwm_channel *ch); // disable + unexport + libera el handle
 
 #endif
