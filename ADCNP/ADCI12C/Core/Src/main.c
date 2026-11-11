@@ -125,7 +125,14 @@ int main(void)
     /* USER CODE BEGIN 3 */
     txData[0] = (uint8_t)(adcValue[0] & 0xFF);
     txData[1] = (uint8_t)((adcValue[0] >> 8) & 0x0F);
-    HAL_I2C_Slave_Transmit(&hi2c1, (uint8_t *)&txData, 2, HAL_MAX_DELAY);//transmit to the master orange pi
+   HAL_StatusTypeDef status =
+        HAL_I2C_Slave_Transmit(&hi2c1, (uint8_t *)txData, sizeof(txData), HAL_MAX_DELAY);
+
+    if (status != HAL_OK)
+    {
+        volatile uint32_t error = HAL_I2C_GetError(&hi2c1);
+        (void)error;
+    } 
   }
   /* USER CODE END 3 */
 }
