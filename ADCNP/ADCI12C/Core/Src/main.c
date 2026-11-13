@@ -41,17 +41,15 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
-DMA_NodeTypeDef Node_GPDMA1_Channel0;
-DMA_QListTypeDef List_GPDMA1_Channel0;
-DMA_HandleTypeDef handle_GPDMA1_Channel0;
 
 I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim1;
 
 /* USER CODE BEGIN PV */
-volatile uint32_t adcValue[1]={0};
-volatile uint8_t txData[2];
+volatile uint32_t adcValue[3]={0};
+volatile uint8_t txData[6]={0};
+uint8_t adcChannelIndex = 0;
 
 /* USER CODE END PV */
 
@@ -59,13 +57,12 @@ volatile uint8_t txData[2];
 void SystemClock_Config(void);
 static void MPU_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_GPDMA1_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_ICACHE_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
-
+uint32_t ADC_Read_Channel(uint32_t channel);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -105,15 +102,15 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_GPDMA1_Init();
   MX_I2C1_Init();
   MX_ICACHE_Init();
   MX_TIM1_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_OC_Start(&htim1, TIM_CHANNEL_1);
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcValue, 1);
-  
+HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
+HAL_TIM_OC_Start(&htim1, TIM_CHANNEL_1);
+//HAL_ADC_Start(&hadc1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -123,17 +120,19 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    txData[0] = (uint8_t)(adcValue[0] & 0xFF);
-    txData[1] = (uint8_t)((adcValue[0] >> 8) & 0x0F);
-   HAL_StatusTypeDef status =
-        HAL_I2C_Slave_Transmit(&hi2c1, (uint8_t *)txData, sizeof(txData), HAL_MAX_DELAY);
+  
+    adcValue[0] = ADC_Read_Channel(ADC_CHANNEL_1);
+    adcValue[1] = ADC_Read_Channel(ADC_CHANNEL_3);
+    adcValue[2] = ADC_Read_Channel(ADC_CHANNEL_5);
 
-    if (status != HAL_OK)
-    {
-        volatile uint32_t error = HAL_I2C_GetError(&hi2c1);
-        (void)error;
-    } 
+    for (int i = 0; i < 3; i++)
+{
+    txData[2*i]     = (uint8_t)(adcValue[i] & 0xFF);
+    txData[2*i + 1] = (uint8_t)((adcValue[i] >> 8) & 0x0F);
+}
+  HAL_I2C_Slave_Transmit(&hi2c1, txData, sizeof(txData), 5);   /* 5 ms, no HAL_MAX_DELAY */
   }
+  
   /* USER CODE END 3 */
 }
 
@@ -223,9 +222,9 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.NbrOfConversion = 1;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
-  hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_CC1;
-  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
-  hadc1.Init.DMAContinuousRequests = ENABLE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
   hadc1.Init.SamplingMode = ADC_SAMPLING_MODE_NORMAL;
   hadc1.Init.Overrun = ADC_OVR_DATA_PRESERVED;
   hadc1.Init.OversamplingMode = DISABLE;
@@ -238,7 +237,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_1;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_640CYCLES_5;
   sConfig.SingleDiff = ADC_SINGLE_ENDED;
   sConfig.OffsetNumber = ADC_OFFSET_NONE;
   sConfig.Offset = 0;
@@ -246,37 +245,27 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_3;
+  sConfig.Rank = ADC_REGULAR_RANK_2;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_5;
+  sConfig.Rank = ADC_REGULAR_RANK_3;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
-
-}
-
-/**
-  * @brief GPDMA1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_GPDMA1_Init(void)
-{
-
-  /* USER CODE BEGIN GPDMA1_Init 0 */
-
-  /* USER CODE END GPDMA1_Init 0 */
-
-  /* Peripheral clock enable */
-  __HAL_RCC_GPDMA1_CLK_ENABLE();
-
-  /* GPDMA1 interrupt Init */
-    HAL_NVIC_SetPriority(GPDMA1_Channel0_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(GPDMA1_Channel0_IRQn);
-
-  /* USER CODE BEGIN GPDMA1_Init 1 */
-
-  /* USER CODE END GPDMA1_Init 1 */
-  /* USER CODE BEGIN GPDMA1_Init 2 */
-
-  /* USER CODE END GPDMA1_Init 2 */
 
 }
 
@@ -382,7 +371,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 0;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 124;
+  htim1.Init.Period = 150;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -393,7 +382,7 @@ static void MX_TIM1_Init(void)
   HAL_TIMEx_DitheringEnable(&htim1);
 
   /* rewrite ARR register when dither mode active */
-  __HAL_TIM_SET_AUTORELOAD(&htim1, 1984);
+  __HAL_TIM_SET_AUTORELOAD(&htim1, 2400);
   HAL_TIM_GenerateEvent(&htim1, TIM_EVENTSOURCE_UPDATE);
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_OC1REF;
   sMasterConfig.MasterOutputTrigger2 = TIM_TRGO2_RESET;
@@ -458,7 +447,38 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+uint32_t ADC_Read_Channel(uint32_t channel) {
+    ADC_ChannelConfTypeDef sConfig = {0};
+    
+    // Configure the selected channel to Rank 1
+    sConfig.Channel = channel;
+    sConfig.Rank = ADC_REGULAR_RANK_1;
+    sConfig.SamplingTime = ADC_SAMPLETIME_640CYCLES_5; // Adjust for your STM32 family
+    sConfig.SingleDiff = ADC_SINGLE_ENDED;
+    sConfig.OffsetNumber = ADC_OFFSET_NONE;
+    sConfig.Offset = 0;
+    
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
+        Error_Handler();
+    }
 
+    if (HAL_ADC_Start(&hadc1) != HAL_OK) {
+        Error_Handler();
+    }
+
+    if (HAL_ADC_PollForConversion(&hadc1, 100) != HAL_OK) {
+        HAL_ADC_Stop(&hadc1);
+        Error_Handler();
+    }
+
+    uint32_t value = HAL_ADC_GetValue(&hadc1);
+
+    if (HAL_ADC_Stop(&hadc1) != HAL_OK) {
+        Error_Handler();
+    }
+
+    return value;
+}
 /* USER CODE END 4 */
 
  /* MPU Configuration */
