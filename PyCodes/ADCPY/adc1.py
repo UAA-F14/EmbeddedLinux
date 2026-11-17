@@ -3,9 +3,8 @@ from smbus2 import SMBus, i2c_msg
 
 with SMBus(0) as bus:
     while True:
-        msg = i2c_msg.read(0x48, 2)
+        msg = i2c_msg.read(0x48, 6)
         bus.i2c_rdwr(msg)
-        data = list(msg)
-        adc_value = int.from_bytes(bytes(data), "little") & 0x0FFF
-        print(f"Bytes: 0x{data[0]:02X} 0x{data[1]:02X} | ADC: {adc_value}")
-        time.sleep(0.1)
+        d = list(msg)
+        ch = [int.from_bytes(bytes(d[i:i+2]), "little") & 0x0FFF for i in (0, 2, 4)]
+        print(ch)

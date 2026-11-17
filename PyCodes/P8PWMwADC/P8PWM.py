@@ -42,6 +42,7 @@ try:
                 parts.append(
                     f"CH{i}: {adc:4d} ({voltage:.2f} V -> {step / PWM_RANGE * 100:5.1f}%)"
                 )
+                print(f"{voltage} : {adc} ")
             time.sleep(0.1)
 except KeyboardInterrupt:
     pass
